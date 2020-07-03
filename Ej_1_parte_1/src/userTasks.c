@@ -18,7 +18,7 @@
 QueueHandle_t cola_1;
 periferico_t periferico[1];
 tecla_t teclas[CANT];
-TaskHandle_t res;
+BaseType_t res;
 
 char mensaje[20];
 
@@ -70,8 +70,9 @@ void init_tasks(){
 				0                           	// Puntero a la tarea creada en el sistema
 			);
 
-		if(res == NULL){
+		if(res == pdFAIL){
 			//atender error
+			while(1);
 		}
 
 		res = 	xTaskCreate(
@@ -83,8 +84,9 @@ void init_tasks(){
 					0                           // Puntero a la tarea creada en el sistema
 			);
 
-		if(res == NULL){
+		if(res == pdFAIL){
 					//atender error
+			while(1);
 		}
 
 		res = 	xTaskCreate(
@@ -96,8 +98,9 @@ void init_tasks(){
 					0                           // Puntero a la tarea creada en el sistema
 			);
 
-		if(res == NULL){
+		if(res == pdFAIL){
 					//atender error
+			while(1);
 		}
 
 		res = 	xTaskCreate(
@@ -109,8 +112,9 @@ void init_tasks(){
 			        0                           // Puntero a la tarea creada en el sistema
 			    );
 
-		if(res == NULL){
+		if(res == pdFAIL){
 					//atender error
+			while(1);
 		}
 
 		res = xTaskCreate(
@@ -122,8 +126,9 @@ void init_tasks(){
 			        0                           	// Puntero a la tarea creada en el sistema
 			    );
 
-		if(res == NULL){
+		if(res == pdFAIL){
 					//atender error
+			while(1);
 		}
 
 		res = xTaskCreate(
@@ -135,13 +140,15 @@ void init_tasks(){
 			        0                           	// Puntero a la tarea creada en el sistema
 			    );
 
-		if(res == NULL){
+		if(res == pdFAIL){
 					//atender error
+			while(1);
 		}
 
 	}
 	else{
 		//atender error
+		while(1);
 	}
 
 
