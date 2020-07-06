@@ -17,13 +17,17 @@
 #include "qmpool.h"
 
 #define N_ELEM_COLA		10
+#define LED_ON		"LED ON"
+#define ERROR		"ERROR"
 
 QueueHandle_t cola_1;
 tecla_t tec[N_TECLAS];
 BaseType_t res;
 
-char mensaje[20];
+char mensaje[50];
 
+mensaje_t *ptr_pool;
+QMPool Pool_memoria;
 
 void init_tasks(){
 
@@ -39,13 +43,26 @@ void init_tasks(){
 			//atender error
 	}
 
+	//inicializacion de teclas
 	int i;
 	for( i = 0; i < N_TECLAS; i++ ){
 		tec[0].tecla = teclas[0];
 	}
 
-	cola_1 = xQueueCreate(N_ELEM_COLA, sizeof(mensaje_t));
+	//inicializacion de cola
+	cola_1 = xQueueCreate(POOL_TOTAL_BLOCKS, sizeof(mensaje_t));
 
+	//inicializacion del memoryPool
+	ptr_pool = (mensaje_t *)pvPortMalloc(POOL_SIZE * sizeof(mensaje_t));
+	QMPool_init(&Pool_memoria, (mensaje_t *)ptr_pool, POOL_SIZE * sizeof(mensaje_t), PACKET_SIZE);
+
+	if(ptr_pool == NULL){
+		//atender error
+		while(1);
+	}
+
+
+	//inicializacion de tareas
 	if(cola_1 != NULL){
 		res = xTaskCreate(
 				tarea_a,                     	// Funcion de la tarea a ejecutar
@@ -103,13 +120,21 @@ void tarea_a( void* taskParmPtr ){
 	TickType_t xPeriodicity =  1000 / portTICK_RATE_MS;		// Tarea periodica cada 1000 ms
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 	const TickType_t xBlockTime = pdMS_TO_TICKS( 200 );
-	char msj[] = "LED ON";
+	//char *msj = LED_ON;
+	mensaje_t *ptr_msj = NULL;
 	while(1){
 
 		gpioToggle(LEDB);
 		if(gpioRead(LEDB)){
-
-			xQueueSend(cola_1, msj, xBlockTime);
+			ptr_msj = (mensaje_t *)QMPool_get(&Pool_memoria, 0);
+			if(ptr_msj != NULL){
+				memcpy(ptr_msj, LED_ON, sizeof(LED_ON));
+				xQueueSend(cola_1, &ptr_msj, xBlockTime);
+				//QMPool_put( &Pool_memoria, ptr_msj );
+			}
+			else{
+				xQueueSend(cola_1, ERROR, xBlockTime);
+			}
 		}
 
 		vTaskDelayUntil( &xLastWakeTime , xPeriodicity );
@@ -126,37 +151,48 @@ void tarea_b( void* taskParmPtr )
 	for(i = 0; i < N_TECLAS; i++){
 		fsmButtonInit( &config[i], i);
 	}
-	char msj[20];
+	mensaje_t *ptr_msj = NULL;
 	// ---------- REPETIR POR SIEMPRE --------------------------
     while( TRUE )
     {
     	for(i = 0; i < N_TECLAS; i++){
     		if(fsmButtonUpdate( &config[i] )){
-    			sprintf (msj, "TEC%d T%dms", config[i].tecla+1-TEC1, config[i].tiempo_medido);
-    			xQueueSend(cola_1, msj, xBlockTime);
+    			ptr_msj = (mensaje_t *)QMPool_get(&Pool_memoria, 0);
+    			if(ptr_msj != NULL){
+    				sprintf (ptr_msj, "TEC%d T%dms", config[i].tecla+1-TEC1, config[i].tiempo_medido);
+    				xQueueSend(cola_1, &ptr_msj, xBlockTime);
+    				//QMPool_put( &Pool_memoria, ptr_msj );
+    			}
+    			else{
+    				xQueueSend(cola_1, ERROR, xBlockTime);
+    			}
     		}
     	}
-
-
 		vTaskDelay( 1 / portTICK_RATE_MS );
     }
 }
 
 void tarea_c( void* taskParmPtr ){
-	//periferico_t* config = (periferico_t*) taskParmPtr;
+	const TickType_t xBlockTime = pdMS_TO_TICKS( 200 );
 	driver_t *Uart_driver;
 	Uart_driver = ( driver_t * )taskParmPtr;
+	mensaje_t *ptr_msj = NULL;
 	while(1){
+		//ptr_msj = (mensaje_t *)QMPool_get(&Pool_memoria, 0);
 
-		xQueueReceive(cola_1, &mensaje, portMAX_DELAY);
+		xQueueReceive(cola_1, &ptr_msj, portMAX_DELAY);
+		memcpy(mensaje, ptr_msj, PACKET_SIZE);
 		Uart_driver->txLen = strlen(mensaje);
-		packetTX( Uart_driver , mensaje );
+		packetTX( Uart_driver);// , ptr_msj );
+		// Libero el bloque de memoria que ya fue trasmitido
+		QMPool_put( &Pool_memoria, ptr_msj );
+
 		vTaskDelay(1 / portTICK_RATE_MS);
 	}
 }
 
 
-void packetTX( driver_t* Uart_driver, char *mensaje )
+void packetTX( driver_t* Uart_driver)//, char *mensaje )
 {
 
     //xQueueSend( Uart_driver->onTxQueue, &mensaje, portMAX_DELAY ); //Envio a la cola de transmision el blocke a transmitir

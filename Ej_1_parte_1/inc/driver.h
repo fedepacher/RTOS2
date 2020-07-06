@@ -58,7 +58,7 @@ typedef struct
 
 bool_t	driverInit	( driver_t* );
 char*	getBuffer 	( driver_t* selectedUart );
-void 	packetTX 	( driver_t* selectedUart,char *txBlock );
+void 	packetTX 	( driver_t* selectedUart);//,char *txBlock );
 char* 	waitPacket	( driver_t* );
 
 /*=====[Prototypes (declarations) of public interrupt functions]=============*/

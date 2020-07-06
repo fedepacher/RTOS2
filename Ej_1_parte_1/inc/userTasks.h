@@ -11,7 +11,6 @@
 
 
 void init_tasks();
-void tarea_tecla( void* taskParmPtr );
 void tarea_a( void* taskParmPtr );
 void tarea_b( void* taskParmPtr );
 void tarea_c( void* taskParmPtr );
