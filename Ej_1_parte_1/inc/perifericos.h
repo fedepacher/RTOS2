@@ -9,18 +9,22 @@
 
 #include "FreeRTOS.h"
 #include "sapi.h"
-#include "semphr.h"
+//include "semphr.h"
 
 typedef struct{
 	char msj[20];
 }mensaje_t;
 
+static gpioMap_t teclas [] = {TEC1, TEC2};
+#define N_TECLAS  sizeof(teclas) / sizeof(gpioMap_t)
+
+/*
 typedef struct
 {
 	gpioMap_t periferico;			//config
 	mensaje_t msj;
 	SemaphoreHandle_t mutex;
-}periferico_t;
+}periferico_t;*/
 
 
 

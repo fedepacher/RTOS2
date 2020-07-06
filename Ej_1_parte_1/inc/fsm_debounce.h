@@ -14,7 +14,7 @@
 #include "sapi.h"
 #include "semphr.h"
 
-#define CANT	2
+//#define CANT	2
 typedef enum
 {
     STATE_BUTTON_UP,
@@ -26,7 +26,7 @@ typedef enum
 
 typedef struct
 {
-	periferico_t tecla;			//config
+	gpioMap_t tecla;			//config
 
 	TickType_t tiempo_medido;	//variables
 	fsmButtonState_t fsmButtonState;//variables
@@ -35,13 +35,14 @@ typedef struct
 
 	uint8_t contFalling  ;		//variables
 	uint8_t contRising  ;		//variables
-	QueueHandle_t queue_tec_pulsada;
+	bool_t btn_released;
+	//QueueHandle_t queue_tec_pulsada;
 } tecla_t;
 
 void fsmButtonError( tecla_t* config );
-void fsmButtonInit( tecla_t* config );
-void fsmButtonUpdate( tecla_t* config );
+void fsmButtonInit( tecla_t* config, uint8_t i );
+bool_t fsmButtonUpdate( tecla_t* config );
 void buttonPressed( tecla_t* config );
-void buttonReleased( tecla_t* config );
+bool_t buttonReleased( tecla_t* config );
 
 #endif /* PROGRAM_RTOS2_EJ_1_PARTE_1_INC_DRIVER_H_ */

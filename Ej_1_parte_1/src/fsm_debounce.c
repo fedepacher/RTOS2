@@ -43,40 +43,43 @@ void buttonPressed( tecla_t* config )
 }
 
 /* accion de el evento de tecla liberada */
-void buttonReleased( tecla_t* config )
+bool_t buttonReleased( tecla_t* config )
 {
 	config->tiempo_up = xTaskGetTickCount();
 	config->tiempo_medido = config->tiempo_up - config->tiempo_down;
 
-	if (config->tiempo_medido > 0)
-		xQueueSend( config->queue_tec_pulsada , &(config->tiempo_medido),  portMAX_DELAY  );
+	if (config->tiempo_medido > 0){
+		//xQueueSend( config->queue_tec_pulsada , &(config->tiempo_medido),  portMAX_DELAY  );
+		return TRUE;
+	}
+	return FALSE;
 }
 
 void fsmButtonError( tecla_t* config )
 {
-	config->fsmButtonState = BUTTON_UP;
+	config->fsmButtonState = STATE_BUTTON_UP;
 }
 
-void fsmButtonInit( tecla_t* config )
+void fsmButtonInit( tecla_t* config, uint8_t i)
 {
+	config->tecla = teclas[i];
 	config->contFalling = 0;
 	config->contRising = 0;
-	config->fsmButtonState = BUTTON_UP;  // Set initial state
+	config->fsmButtonState = STATE_BUTTON_UP;  // Set initial state
 }
 
 #define DEBOUNCE_TIME 40
 
 // FSM Update Sate Function
-void fsmButtonUpdate( tecla_t* config )
+bool_t fsmButtonUpdate( tecla_t* config )
 {
-   // static bool_t flagFalling = FALSE;
-    //static bool_t flagRising = FALSE;
+	bool_t btn_released = FALSE;
 
     switch( config->fsmButtonState )
     {
         case STATE_BUTTON_UP:
             /* CHECK TRANSITION CONDITIONS */
-            if( !gpioRead( config->tecla.periferico ) )
+            if( !gpioRead( config->tecla ) )
             {
             	config->fsmButtonState = STATE_BUTTON_FALLING;
             }
@@ -88,7 +91,7 @@ void fsmButtonUpdate( tecla_t* config )
             /* CHECK TRANSITION CONDITIONS */
             if( config->contFalling >= DEBOUNCE_TIME )
             {
-                if( !gpioRead( config->tecla.periferico ) )
+                if( !gpioRead( config->tecla ) )
                 {
                 	config->fsmButtonState = STATE_BUTTON_DOWN;
 
@@ -110,7 +113,7 @@ void fsmButtonUpdate( tecla_t* config )
 
         case STATE_BUTTON_DOWN:
 			/* CHECK TRANSITION CONDITIONS */
-			if( gpioRead( config->tecla.periferico ) )
+			if( gpioRead( config->tecla ) )
 			{
 				config->fsmButtonState = STATE_BUTTON_RISING;
 			}
@@ -123,12 +126,12 @@ void fsmButtonUpdate( tecla_t* config )
 
             if( config->contRising >= DEBOUNCE_TIME )
             {
-                if( gpioRead( config->tecla.periferico ) )
+                if( gpioRead( config->tecla ) )
                 {
                 	config->fsmButtonState = STATE_BUTTON_UP;
 
                     /* ACCION DEL EVENTO ! */
-                    buttonReleased(config);
+                	btn_released = buttonReleased(config);
                 }
                 else
                 {
@@ -145,4 +148,5 @@ void fsmButtonUpdate( tecla_t* config )
             fsmButtonError(config);
             break;
     }
+    return btn_released;
 }
