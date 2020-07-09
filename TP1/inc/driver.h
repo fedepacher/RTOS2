@@ -50,12 +50,12 @@ typedef struct
     //char dato_rx[LENGHT_MAX]; //Bloque de memoria de la recepcion
     uint8_t txCounter; //contador de bytes transmitidos
     uint8_t rxCounter; //contador de bytes recibidos
-    //QueueHandle_t onTxQueue; //cola de transmision (por esta cola llegan los bloques de memoria a transmitir)
-    //QueueHandle_t onRxQueue; //cola de recepcion (por esta cola llegan los bloques de memoria recibidos)
+    QueueHandle_t onTxQueue; //cola de transmision (por esta cola llegan los bloques de memoria a transmitir)
+    QueueHandle_t onRxQueue; //cola de recepcion (por esta cola llegan los bloques de memoria recibidos)
     uint8_t txLen; //longitud del paquete en transmision
     uint8_t rxLen; //longitud del paquete recibido
     SemaphoreHandle_t mutex;
-    SemaphoreHandle_t data_received;
+    //SemaphoreHandle_t data_received;
     SemaphoreHandle_t start_timer;		//inicializa un timer para contabilizar que el si el dato no llego se reinicie contador de rx_uart
     xTimerHandle timerHndl5SecTimeout;
     //void (*vTimerCallback5SecExpired)(xTimerHandle pxTimer);

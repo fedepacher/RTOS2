@@ -24,13 +24,13 @@
 /*=====[Definitions of private data types]===================================*/
 
 /*=====[Definitions of external public global variables]=====================*/
-extern SemaphoreHandle_t semaphore_app_ready;
+//extern SemaphoreHandle_t semaphore_app_ready;
 /*=====[Definitions of public global variables]==============================*/
 
 /*=====[Definitions of private global variables]=============================*/
 BaseType_t res;
-//QueueHandle_t queue;
-SemaphoreHandle_t semaphore_sep_ready;
+QueueHandle_t queue;
+//SemaphoreHandle_t semaphore_sep_ready;
 /*=====[Prototypes (declarations) of private functions]======================*/
 
 /*=====[Implementations of public functions]=================================*/
@@ -39,11 +39,9 @@ SemaphoreHandle_t semaphore_sep_ready;
 
 bool_t init_separate_tasks(driver_t* Uart_driver){
 
-	//inicializacion de cola
-	//queue = xQueueCreate(POOL_TOTAL_BLOCKS, sizeof(mensaje_t));
-	semaphore_sep_ready = xSemaphoreCreateBinary();
-	if(semaphore_sep_ready != NULL){
-		res = xTaskCreate(separate_string_task,     // Funcion de la tarea a ejecutar
+	queue = xQueueCreate(POOL_TOTAL_BLOCKS, sizeof(mensaje_t));//esto lo quiero eliminar
+	if(queue != NULL){
+	res = xTaskCreate(separate_string_task,     // Funcion de la tarea a ejecutar
 					(const char *) "separate_string_task", // Nombre de la tarea como String amigable para el usuario
 					configMINIMAL_STACK_SIZE * 2, 	// Cantidad de stack de la tarea
 					(void*) Uart_driver,        		// Parametros de tarea
@@ -81,35 +79,15 @@ void separate_string_task(void* taskParmPtr) {
 	driver_t *Uart_driver = (driver_t *) taskParmPtr;
 	TickType_t xPeriodicity = 1 / portTICK_RATE_MS;	// Tarea periodica cada 1ms
 	const TickType_t xBlockTime = pdMS_TO_TICKS( 200 );
-
+	mensaje_t *ptr_msj = NULL;
 	while (1) {
-		xSemaphoreTake(Uart_driver->data_received, portMAX_DELAY);
+		xQueueReceive(Uart_driver->onRxQueue, &ptr_msj, portMAX_DELAY);
 
-		//Uart_driver->ptr_pool_tx = (mensaje_t *)QMPool_get(&Uart_driver->Pool_memoria, 0);//pedimos memoria
-		if(validate_String(Uart_driver->ptr_pool_rx)){	//chequea que no haya caracteres indeseados
-			if(check_Crc(Uart_driver->ptr_pool_rx)){
-
-				/*switch (Uart_driver->ptr_pool_rx->msg[0]) {
-				case m:
-					result = low_String(Uart_driver->ptr_pool_rx);
-					break;
-				case M:
-					result = high_String(Uart_driver->ptr_pool_rx);
-					break;
-				default:
-
-					break;
-				}
-				if(result){
-					Uart_driver->ptr_pool_tx = Uart_driver->ptr_pool_rx;
-					Uart_driver->txLen = Uart_driver->ptr_pool_rx->lenght;
-
-					gpioToggle(LED3);
-					packetTX(Uart_driver);
-				}*/
-				if(Uart_driver->ptr_pool_rx->msg[0] == m || Uart_driver->ptr_pool_rx->msg[0] == M){
-					//xQueueSend(queue, &Uart_driver->ptr_pool_rx, xBlockTime);
-					xSemaphoreGive(semaphore_sep_ready);
+		if(validate_String(ptr_msj)){	//chequea que no haya caracteres indeseados
+			if(check_Crc(ptr_msj)){
+				if(ptr_msj->msg[0] == m || ptr_msj->msg[0] == M){
+					xQueueSend(queue, &ptr_msj, xBlockTime);
+					//xSemaphoreGive(semaphore_sep_ready);
 				}
 				else{
 					char err[] = "Falta la M o n";
@@ -136,15 +114,25 @@ void app_receive_task(void* taskParmPtr) {
 	driver_t *Uart_driver = (driver_t *) taskParmPtr;
 	TickType_t xPeriodicity = 1 / portTICK_RATE_MS;	// Tarea periodica cada 1ms
 	const TickType_t xBlockTime = pdMS_TO_TICKS( 200 );
-
+	mensaje_t *ptr_msj = NULL;
 	while (1) {
-		xSemaphoreTake(semaphore_app_ready, portMAX_DELAY);
+		//Uart_driver->ptr_pool_tx = (mensaje_t *)QMPool_get(&Uart_driver->Pool_memoria, 0);//pedimos memoria
+		xQueueReceive(Uart_driver->onTxQueue, &ptr_msj, portMAX_DELAY);
 		gpioToggle(LED3);
 
-		Uart_driver->ptr_pool_tx = Uart_driver->ptr_pool_rx;
-		Uart_driver->txLen = Uart_driver->ptr_pool_rx->lenght;
+		//calculo nuevo CRC
+		volatile uint8_t seed_crc = crc8_init();
+		uint8_t crc_l;
+		uint8_t crc_h;
+		seed_crc = crc8_calc(seed_crc, ptr_msj->msg, ptr_msj->lenght - 2); //-2 asi no incluye el crc de la cadena entrante
+		crc_sep(seed_crc, &crc_h, &crc_l);
+
+		Uart_driver->ptr_pool_tx = ptr_msj;
+		Uart_driver->ptr_pool_tx->msg[Uart_driver->ptr_pool_tx->lenght - 2] = crc_h;
+		Uart_driver->ptr_pool_tx->msg[Uart_driver->ptr_pool_tx->lenght - 1] = crc_l;
+
+		Uart_driver->txLen = ptr_msj->lenght;
 		packetTX(Uart_driver);
-		Uart_driver->rxLen = 0;
 
 		vTaskDelay(xPeriodicity);
 	}

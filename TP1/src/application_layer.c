@@ -24,12 +24,12 @@
 /*=====[Definitions of private data types]===================================*/
 
 /*=====[Definitions of external public global variables]=====================*/
-extern SemaphoreHandle_t semaphore_sep_ready;
+extern QueueHandle_t queue;;
 /*=====[Definitions of public global variables]==============================*/
 
 /*=====[Definitions of private global variables]=============================*/
 BaseType_t res;
-SemaphoreHandle_t semaphore_app_ready;
+//SemaphoreHandle_t semaphore_app_ready;
 /*=====[Prototypes (declarations) of private functions]======================*/
 
 /*=====[Implementations of public functions]=================================*/
@@ -38,8 +38,7 @@ SemaphoreHandle_t semaphore_app_ready;
 
 bool_t init_app_tasks(driver_t* Uart_driver){
 
-	semaphore_app_ready = xSemaphoreCreateBinary();
-	if(semaphore_app_ready != NULL){
+
 		res = xTaskCreate(app_task,     // Funcion de la tarea a ejecutar
 				(const char *) "app_task", // Nombre de la tarea como String amigable para el usuario
 				configMINIMAL_STACK_SIZE * 2, 	// Cantidad de stack de la tarea
@@ -51,10 +50,8 @@ bool_t init_app_tasks(driver_t* Uart_driver){
 		if (res == pdFAIL) {
 			return FALSE;
 		}
-	}
-	else{
-		return FALSE;
-	}
+
+
 	return TRUE;
 }
 
@@ -67,22 +64,23 @@ void app_task(void* taskParmPtr) {
 	mensaje_t *ptr_msj = NULL;
 	bool_t result = FALSE;
 	while (1) {
-		//xQueueReceive(queue, &ptr_msj, portMAX_DELAY);
-		xSemaphoreTake(semaphore_sep_ready, portMAX_DELAY);
+		xQueueReceive(queue, &ptr_msj, portMAX_DELAY);
+		//xSemaphoreTake(semaphore_sep_ready, portMAX_DELAY);
 		result = FALSE;
-		switch (Uart_driver->ptr_pool_rx->msg[0]) {
+		switch (ptr_msj->msg[0]) {
 		case m:
-			result = lowercase_String(Uart_driver->ptr_pool_rx);
+			result = lowercase_String(ptr_msj);
 			break;
 		case M:
-			result = uppercase_String(Uart_driver->ptr_pool_rx);
+			result = uppercase_String(ptr_msj);
 			break;
 		default:
 
 			break;
 		}
 		if(result){
-			xSemaphoreGive(semaphore_app_ready);
+			//xSemaphoreGive(semaphore_app_ready);
+			xQueueSend(Uart_driver->onTxQueue, &ptr_msj, xBlockTime);
 		}
 
 		vTaskDelay(xPeriodicity);

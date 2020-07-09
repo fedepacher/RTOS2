@@ -121,7 +121,8 @@ bool_t rxInterruptEnable( driver_t* Uart_driver )
 			 Uart_driver->rxCounter = 0;
 			 Uart_driver->stop_rx = FALSE;
 			 Uart_driver->ptr_pool_rx->lenght = Uart_driver -> rxLen - 1; //chequear este -1
-			 xSemaphoreGiveFromISR(Uart_driver->data_received, &xHigherPriorityTaskWoken);
+			 Uart_driver -> rxLen = 0;
+			 xQueueSendFromISR(Uart_driver->onRxQueue, &Uart_driver->ptr_pool_rx, &xHigherPriorityTaskWoken);
 		 }
 	 }
 	 else
@@ -170,10 +171,10 @@ bool_t rxInterruptEnable( driver_t* Uart_driver )
 		 Uart_driver->ptr_pool_tx->lenght = 0;
 		 Uart_driver->txLen = 0;
 		 Uart_driver-> txCounter = 0;
-		 //QMPool_put_FROM_ISR( &Uart_driver->Pool_memoria, Uart_driver->ptr_pool_tx );
 		 //free memory
 		 //Uart_driver->rxLen = 0;
 		 QMPool_put_FROM_ISR( &Uart_driver->Pool_memoria, Uart_driver->ptr_pool_rx );
+		 //QMPool_put_FROM_ISR( &Uart_driver->Pool_memoria, Uart_driver->ptr_pool_tx );
 	 }
 
 	 taskEXIT_CRITICAL_FROM_ISR( uxSavedInterrumptStatus );

@@ -43,8 +43,9 @@ void init_tasks() {
 	Uart_driver.baudRate = 115200;
 	Uart_driver.mutex = xSemaphoreCreateMutex();
 	Uart_driver.start_timer = xSemaphoreCreateBinary();
-	Uart_driver.data_received = xSemaphoreCreateBinary();
-	//Uart_driver.onTxQueue = xQueueCreate(POOL_TOTAL_BLOCKS, sizeof(mensaje_t));
+	//Uart_driver.data_received = xSemaphoreCreateBinary();
+	Uart_driver.onTxQueue = xQueueCreate(POOL_TOTAL_BLOCKS, sizeof(mensaje_t));
+	Uart_driver.onRxQueue = xQueueCreate(POOL_TOTAL_BLOCKS, sizeof(mensaje_t));
 
 	//inicializacion de uart driver
 	if (driverInit(&Uart_driver) == FALSE) {
