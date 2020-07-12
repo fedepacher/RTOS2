@@ -10,6 +10,7 @@
 
 #include "sapi.h"
 #include "types.h"
+#include "crc8.h"
 
 /**
  * @brief  Convert to hexadecimal.
@@ -21,30 +22,30 @@ char convert_Hex(uint8_t val);
 /**
  * @brief  Check if received frame was ok
  * @param  mens		frame to be checked.
- * @retval true if ok.
+ * @retval 1 if ok.
  */
-bool_t validate_String(mensaje_t * mens);
+uint8_t validate_String(layer2_t * msg);
 
 /**
  * @brief  Check if received CRC frame was ok
  * @param  mens		frame to be checked.
  * @retval true if ok.
  */
-bool_t check_Crc(mensaje_t * mens);
+uint8_t check_Crc(layer2_t * msg);
 
 /**
  * @brief  Convert to lowercase
- * @param  mens		frame to be checked.
+ * @param  msg		frame to be checked.
  * @retval true if ok.
  */
-bool_t lowercase_String(mensaje_t * const msg);
+uint8_t lowercase_String(mensaje_t * msg);
 
 /**
  * @brief  Convert to uppercase
- * @param  mens		frame to be checked.
+ * @param  msg		frame to be checked.
  * @retval true if ok.
  */
-bool_t uppercase_String(mensaje_t * const msg);
+uint8_t uppercase_String(mensaje_t * msg);
 
 /**
  * @brief  Separate 1 byte CRC into 2 byte CRC -> CRC_H(4b) CRC_L(4b) -> CRC_H(8b) CRC_L(8b).
@@ -54,5 +55,13 @@ bool_t uppercase_String(mensaje_t * const msg);
  * @retval none.
  */
 void crc_sep(uint8_t crc, uint8_t *crc_h, uint8_t *crc_l );
+
+/**
+ * @brief  Calculate CRC.
+ * @param  msg		msg to calculate crc.
+ * @param  crc		initial seed
+ * @retval crc value.
+ */
+uint8_t crc_calculation(layer2_t * msg, uint8_t crc);
 
 #endif /* PROGRAM_RTOS2_TP1_INC_EXTRA_FUNC_H_ */

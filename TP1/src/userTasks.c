@@ -18,7 +18,7 @@
 #include "application_layer.h"
 
 /*=====[Definition macros of private constants]==============================*/
-
+#define QUEUE_SIZE		10
 /*=====[Private function-like macros]========================================*/
 
 /*=====[Definitions of private data types]===================================*/
@@ -44,8 +44,8 @@ void init_tasks() {
 	Uart_driver.mutex = xSemaphoreCreateMutex();
 	Uart_driver.start_timer = xSemaphoreCreateBinary();
 	//Uart_driver.data_received = xSemaphoreCreateBinary();
-	Uart_driver.onTxQueue = xQueueCreate(POOL_TOTAL_BLOCKS, sizeof(mensaje_t));
-	Uart_driver.onRxQueue = xQueueCreate(POOL_TOTAL_BLOCKS, sizeof(mensaje_t));
+	Uart_driver.onTxQueue = xQueueCreate(QUEUE_SIZE, sizeof(layer2_t));
+	Uart_driver.onRxQueue = xQueueCreate(QUEUE_SIZE, sizeof(layer2_t));
 
 	//inicializacion de uart driver
 	if (driverInit(&Uart_driver) == FALSE) {
@@ -55,16 +55,16 @@ void init_tasks() {
 	}
 
 	//inicializacion de capa de separacion
-	if (init_separate_tasks(&Uart_driver) == FALSE) {
+	/*if (init_separate_tasks(&Uart_driver) == FALSE) {
 		char err[] = "ERROR Separate Layer";
 		print_error(&Uart_driver, err, strlen(err));
 		while (1);
-	}
+	}*/
 
 	//inicializacion de capa de aplicacion
 	if (init_app_tasks(&Uart_driver) == FALSE) {
-		char err[] = "ERROR Application Layer";
-		print_error(&Uart_driver, err, strlen(err));
+		//char err[] = "ERROR Application Layer";
+		//print_error(&Uart_driver, err, strlen(err));
 		while (1);
 	}
 

@@ -13,7 +13,7 @@
 #include "FreeRTOS.h"
 #include "sapi.h"
 #include "task.h"
-#include "crc8.h"
+#include "string.h"
 /*=====[Definition macros of private constants]==============================*/
 
 /*=====[Private function-like macros]========================================*/
@@ -89,100 +89,120 @@ char convert_Hex(uint8_t val){
 
 }
 
-bool_t validate_String(mensaje_t * mens){
-	bool_t result = FALSE;
+uint8_t validate_String(layer2_t * msg){
+
+	uint8_t result = 0;
 	uint8_t i;
-	if (mens->lenght - 2 > 0){					//corroboro que esto sea > 0 aunque no deberia darse lo opuesto
-		taskENTER_CRITICAL();
-		for (i = 0; i < mens->lenght - 2; i++) {//-2 para no contabilizar el crc
-			if ((mens->msg[i] >= A && mens->msg[i] <= Z) || (mens->msg[i] >= a && mens->msg[i] <= z))//chequeo que este dentro de los parametros ascii requeridos de a-z y A-Z
+	volatile uint8_t lenght;
+
+	if (msg->dato != NULL){					//corroboro que esto sea > 0 aunque no deberia darse lo opuesto
+		lenght = strlen((char *)msg->dato);
+		for (i = 0; i < lenght; i++) {
+			if ((msg->dato[i] >= A && msg->dato[i] <= Z) || (msg->dato[i] >= a && msg->dato[i] <= z))//chequeo que este dentro de los parametros ascii requeridos de a-z y A-Z
 			{
-				result = TRUE;
+				result = 1;
 			}
 			else {
-				result = FALSE;
+				result = 0;
 				break;
 			}
 		}
-		taskEXIT_CRITICAL();
 	}
+
 	return result;
 
 }
 
-bool_t check_Crc(mensaje_t * mens){
-	bool_t result = FALSE;
+uint8_t check_Crc(layer2_t * msg){
+
 	uint8_t crc_l;
 	uint8_t crc_h;
 	uint8_t crc_h_aux; //= convert_hex( mens->msg[mens->lenght-1]);
 	uint8_t crc_l_aux; //= convert_hex( mens->msg[mens->lenght-0]);
 	uint8_t i;
 	volatile uint8_t seed_crc;
+	volatile uint8_t lenght = strlen((char *)msg->dato);
 
 	seed_crc = crc8_init();
-	taskENTER_CRITICAL();
-	crc_h_aux = convert_Hex( mens->msg[mens->lenght-2]);
-	crc_l_aux = convert_Hex( mens->msg[mens->lenght-1]);
 
-	for(i = 0; i< mens->lenght - 2; i++ ){
-		seed_crc = crc8_calc(seed_crc, (char *)&mens->msg[i], 1);
-	}
-	taskEXIT_CRITICAL();
+	crc_h_aux = convert_Hex( msg->crc[0]);
+	crc_l_aux = convert_Hex( msg->crc[1]);
+
+	/*seed_crc = crc8_calc(seed_crc, &msg->c, 1);
+
+
+	for(i = 0; i < lenght; i++ ){
+		seed_crc = crc8_calc(seed_crc, (char *)&msg->dato[i], 1);
+	}*/
+
+	seed_crc = crc_calculation(msg, seed_crc);
 
 	crc_sep(seed_crc, &crc_h, &crc_l); //a lenght le saco el crc para que calcule el crc del msj solo
 	if(crc_l == crc_l_aux && crc_h == crc_h_aux){
-		result = TRUE;;
+		return 1;
 	}
 
-	return result;
+	return 0;
 
 }
 
-bool_t lowercase_String(mensaje_t * const msg) {
+
+uint8_t crc_calculation(layer2_t * msg, uint8_t crc){
+	volatile uint8_t seed;
 	uint8_t i;
-	bool_t result;
-	taskENTER_CRITICAL();
-	//xSemaphoreTake(mutex_analize, portMAX_DELAY);
-	for (i = 1; i < msg->lenght - 2; i++) {
-		if (msg->msg[i] >= A && msg->msg[i] <= Z)//chequeo que este dentro de los parametros ascii requeridos de a-z y A-Z
+	volatile uint8_t lenght = strlen((char *)msg->dato);
+
+	seed = crc8_calc(crc, &msg->c, 1);
+
+	for(i = 0; i < lenght; i++ ){
+		seed = crc8_calc(seed, (char *)&msg->dato[i], 1);
+	}
+	return seed;
+}
+
+uint8_t lowercase_String(mensaje_t * msg) {
+	uint8_t i;
+	uint8_t result = 0;
+	volatile uint8_t lenght = strlen((char *)msg);
+
+	for (i = 0; i < lenght; i++) {
+		if (msg[i] >= A && msg[i] <= Z)//chequeo que este dentro de los parametros ascii requeridos de a-z y A-Z
 		{
-			msg->msg[i] = msg->msg[i] + 32;
+			msg[i] = msg[i] + 32;
 
 		}
 		else {
-			if (msg->msg[i] < a || msg->msg[i] > z){
-				result = FALSE;
+			if (msg[i] < a || msg[i] > z){
+				result = 0;
 				break;
 			}
 		}
-		result = TRUE;
+		result = 1;
 	}
-	//xSemaphoreGive(mutex_analize);
-	taskEXIT_CRITICAL();
+
 	return result;
 }
 
-bool_t uppercase_String(mensaje_t * const msg) {
+uint8_t uppercase_String(mensaje_t * msg) {
 
 	uint8_t i;
-	bool_t result;
-	taskENTER_CRITICAL();
-	//xSemaphoreTake(mutex_analize, portMAX_DELAY);
-	for (i = 1; i < msg->lenght - 2; i++) {
-		if (msg->msg[i] >= a && msg->msg[i] <= z)//chequeo que este dentro de los parametros ascii requeridos de a-z y A-Z
+	uint8_t result = 0;
+	volatile uint8_t lenght = strlen((char *)msg);
+
+	for (i = 0; i < lenght; i++) {
+		if (msg[i] >= a && msg[i] <= z)//chequeo que este dentro de los parametros ascii requeridos de a-z y A-Z
 		{
-			msg->msg[i] = msg->msg[i] - 32;
+			msg[i] = msg[i] - 32;
 		}
 		else {
-			if (msg->msg[i] < A || msg->msg[i] > Z){
-				result = FALSE;
+			if (msg[i] < A || msg[i] > Z){
+				result = 0;
 				break;
 			}
 		}
-		result = TRUE;
+		result = 1;
 	}
-	//xSemaphoreGive(mutex_analize);
-	taskEXIT_CRITICAL();
+
 	return result;
 }
 

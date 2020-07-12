@@ -13,7 +13,8 @@
 #include "print_uart_error.h"
 #include "application_layer.h"
 #include "extra_func.h"
-#include "separate_layer.h"
+#include "layer2.h"
+//#include "separate_layer.h"
 
 /*=====[Inclusions of private function dependencies]=========================*/
 
@@ -24,7 +25,7 @@
 /*=====[Definitions of private data types]===================================*/
 
 /*=====[Definitions of external public global variables]=====================*/
-extern QueueHandle_t queue;;
+
 /*=====[Definitions of public global variables]==============================*/
 
 /*=====[Definitions of private global variables]=============================*/
@@ -61,28 +62,29 @@ void app_task(void* taskParmPtr) {
 	driver_t *Uart_driver = (driver_t *) taskParmPtr;
 	TickType_t xPeriodicity = 1 / portTICK_RATE_MS;	// Tarea periodica cada 1ms
 	const TickType_t xBlockTime = pdMS_TO_TICKS( 200 );
-	mensaje_t *ptr_msj = NULL;
-	bool_t result = FALSE;
+	layer2_t ptr_msj;
+	uint8_t result = 0;
 	while (1) {
-		xQueueReceive(queue, &ptr_msj, portMAX_DELAY);
-		//xSemaphoreTake(semaphore_sep_ready, portMAX_DELAY);
-		result = FALSE;
-		switch (ptr_msj->msg[0]) {
-		case m:
-			result = lowercase_String(ptr_msj);
-			break;
-		case M:
-			result = uppercase_String(ptr_msj);
-			break;
-		default:
+		xQueueReceive(Uart_driver->onRxQueue, &ptr_msj, portMAX_DELAY);
 
-			break;
+		if(validate_String(&ptr_msj)){
+			switch (ptr_msj.c) {
+			case m:
+				result = lowercase_String(ptr_msj.dato);
+				break;
+			case M:
+				result = uppercase_String(ptr_msj.dato);
+				break;
+			default:
+				result = 0;	//si viene ac es porque se no tenia la m o M
+				break;
+			}
 		}
+
 		if(result){
-			//xSemaphoreGive(semaphore_app_ready);
-			xQueueSend(Uart_driver->onTxQueue, &ptr_msj, xBlockTime);
+			layer2_msg_gen(&ptr_msj, Uart_driver);
 		}
-
+		layer2_destructor(&ptr_msj, HANDLER_MODE_OFF);
 		vTaskDelay(xPeriodicity);
 	}
 }

@@ -81,7 +81,7 @@ void separate_string_task(void* taskParmPtr) {
 	const TickType_t xBlockTime = pdMS_TO_TICKS( 200 );
 	mensaje_t *ptr_msj = NULL;
 	while (1) {
-		xQueueReceive(Uart_driver->onRxQueue, &ptr_msj, portMAX_DELAY);
+		/*xQueueReceive(Uart_driver->onRxQueue, &ptr_msj, portMAX_DELAY);
 
 		if(validate_String(ptr_msj)){	//chequea que no haya caracteres indeseados
 			if(check_Crc(ptr_msj)){
@@ -104,7 +104,7 @@ void separate_string_task(void* taskParmPtr) {
 			print_error(Uart_driver, err, strlen(err));
 		}
 
-
+*/
 
 		vTaskDelay(xPeriodicity);
 	}
@@ -115,24 +115,67 @@ void app_receive_task(void* taskParmPtr) {
 	TickType_t xPeriodicity = 1 / portTICK_RATE_MS;	// Tarea periodica cada 1ms
 	const TickType_t xBlockTime = pdMS_TO_TICKS( 200 );
 	mensaje_t *ptr_msj = NULL;
+	//mensaje_t *ptr_msj_armar = NULL;
+	char *temp;
+	//uint8_t index;
+	char ptr_msj_armar[POOL_SIZE];
 	while (1) {
-		//Uart_driver->ptr_pool_tx = (mensaje_t *)QMPool_get(&Uart_driver->Pool_memoria, 0);//pedimos memoria
+		//ptr_msj_armar = (mensaje_t *)QMPool_get(&Uart_driver->Pool_memoria, 0);//pedimos memoria
+
+
 		xQueueReceive(Uart_driver->onTxQueue, &ptr_msj, portMAX_DELAY);
-		gpioToggle(LED3);
+		//if(ptr_msj_armar != NULL){
+			gpioToggle(LED3);
 
-		//calculo nuevo CRC
-		volatile uint8_t seed_crc = crc8_init();
-		uint8_t crc_l;
-		uint8_t crc_h;
-		seed_crc = crc8_calc(seed_crc, ptr_msj->msg, ptr_msj->lenght - 2); //-2 asi no incluye el crc de la cadena entrante
-		crc_sep(seed_crc, &crc_h, &crc_l);
+			//temp = ptr_msj->msg;	//almaceno el registro donde empieza el puntero
 
-		Uart_driver->ptr_pool_tx = ptr_msj;
-		Uart_driver->ptr_pool_tx->msg[Uart_driver->ptr_pool_tx->lenght - 2] = crc_h;
-		Uart_driver->ptr_pool_tx->msg[Uart_driver->ptr_pool_tx->lenght - 1] = crc_l;
 
-		Uart_driver->txLen = ptr_msj->lenght;
-		packetTX(Uart_driver);
+			//calculo nuevo CRC
+			volatile uint8_t seed_crc = crc8_init();
+			uint8_t crc_l;
+			uint8_t crc_h;
+			/*seed_crc = crc8_calc(seed_crc, ptr_msj->msg, ptr_msj->lenght - 2); //-2 asi no incluye el crc de la cadena entrante
+			crc_sep(seed_crc, &crc_h, &crc_l);
+
+
+
+			uint8_t i;
+			ptr_msj_armar[0] = '(';
+
+			for(i = 0; i < ptr_msj->lenght - 2; i++){
+				ptr_msj_armar[i + 1] = ptr_msj->msg[i];
+			}
+			//Uart_driver->ptr_pool_tx = ptr_msj;
+			ptr_msj_armar[ptr_msj->lenght - 1] = crc_h;
+			ptr_msj_armar[ptr_msj->lenght - 0] = crc_l;
+			ptr_msj_armar[ptr_msj->lenght + 1] = ')';
+			ptr_msj->lenght	+=	2; //le sumo 2 porque ahora tiene el ( y )
+			//memcpy(Uart_driver->ptr_pool_tx->msg, ptr_msj_armar, ptr_msj->lenght);
+			Uart_driver->txLen = ptr_msj->lenght;*/
+
+
+			/**ptr_msj_armar->msg = '(';
+			ptr_msj_armar->msg++;
+			for(i = 0; i < ptr_msj->lenght - 2; i++){
+				*ptr_msj_armar->msg = ptr_msj->msg[i];
+				ptr_msj_armar->msg++;
+			}
+			*ptr_msj_armar->msg = crc_h;
+			ptr_msj_armar->msg++;
+			*ptr_msj_armar->msg = crc_l;
+			ptr_msj_armar->msg++;
+			*ptr_msj_armar->msg = ')';
+			ptr_msj_armar->msg++;
+			memcpy(Uart_driver->ptr_pool_tx->msg, ptr_msj_armar->msg, ptr_msj->lenght + 2);*/
+
+
+			packetTX(Uart_driver);
+			//QMPool_put(&Uart_driver->Pool_memoria, ptr_msj_armar);
+
+		/*}else{
+			char err[] = "No hay memoria";
+			print_error(Uart_driver, err, strlen(err));
+		}*/
 
 		vTaskDelay(xPeriodicity);
 	}

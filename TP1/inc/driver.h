@@ -42,12 +42,7 @@ typedef struct
 {
     uartMap_t uartValue; //Numero de UART a utilizar
     uint32_t baudRate; //velocidad de transmision
-    //mensaje_t dato_tx;
-    //mensaje_t dato_rx;
-    //TimerHandle_t onTxTimeOut; //Timer para el timeout de la transmision
-    //TimerHandle_t onRxTimeOut; //Timer para el timeout de la recepcion
-    //char dato_tx[LENGHT_MAX]; //Bloque de memoria de la transmision en curso
-    //char dato_rx[LENGHT_MAX]; //Bloque de memoria de la recepcion
+
     uint8_t txCounter; //contador de bytes transmitidos
     uint8_t rxCounter; //contador de bytes recibidos
     QueueHandle_t onTxQueue; //cola de transmision (por esta cola llegan los bloques de memoria a transmitir)
@@ -55,15 +50,16 @@ typedef struct
     uint8_t txLen; //longitud del paquete en transmision
     uint8_t rxLen; //longitud del paquete recibido
     SemaphoreHandle_t mutex;
-    //SemaphoreHandle_t data_received;
     SemaphoreHandle_t start_timer;		//inicializa un timer para contabilizar que el si el dato no llego se reinicie contador de rx_uart
     xTimerHandle timerHndl5SecTimeout;
-    //void (*vTimerCallback5SecExpired)(xTimerHandle pxTimer);
     bool_t start_rx;
     bool_t stop_rx;
-    mensaje_t *ptr_pool_rx;
-    mensaje_t *ptr_pool_tx;
-    QMPool Pool_memoria;
+
+    mensaje_t *dataRx;
+    mensaje_t *dataTx;
+
+    //layer2_t *message;
+
 } driver_t;
 
 /*=====[Prototypes (declarations) of public functions]=======================*/

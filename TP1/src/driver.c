@@ -14,6 +14,8 @@
 #include "uartIRQ.h"
 #include "types.h"
 #include "print_uart_error.h"
+#include "layer2.h"
+
 
 /*=====[Inclusions of private function dependencies]=========================*/
 
@@ -32,6 +34,8 @@ SemaphoreHandle_t time_expired_semaph;
 /*=====[Definitions of public global variables]==============================*/
 
 /*=====[Definitions of private global variables]=============================*/
+mensaje_t *memory = NULL;	 // Segment of memory used to memory pool library
+QMPool memoryPool;
 
 /*=====[Prototypes (declarations) of private functions]======================*/
 static void vTimerCallback5SecExpired(xTimerHandle pxTimer);
@@ -54,24 +58,31 @@ bool_t driverInit( driver_t* Uart_driver )
 	Uart_driver->stop_rx = FALSE;
 
 	//reservamos pool de mem para rx
-	Uart_driver->ptr_pool_rx = (mensaje_t *)pvPortMalloc(POOL_SIZE * sizeof(mensaje_t));
-	QMPool_init(&Uart_driver->Pool_memoria, (mensaje_t *)Uart_driver->ptr_pool_rx, POOL_SIZE * sizeof(mensaje_t), PACKET_SIZE);
+	memory = (mensaje_t *)pvPortMalloc(POOL_SIZE*sizeof(mensaje_t));
+	// Create memory pool used on task and UART
+	QMPool_init(&memoryPool, (mensaje_t *)memory, POOL_SIZE*sizeof(mensaje_t), PACKET_SIZE);
 
-
-	//reservamos pool de mem para tx
-	Uart_driver->ptr_pool_tx = (mensaje_t *)pvPortMalloc(POOL_SIZE * sizeof(mensaje_t));
-	QMPool_init(&Uart_driver->Pool_memoria, (mensaje_t *)Uart_driver->ptr_pool_tx, POOL_SIZE * sizeof(mensaje_t), PACKET_SIZE);
-
-	if(Uart_driver->ptr_pool_rx == NULL){
+	if(memory == NULL){
 		char err[] = "ERROR Dinamic memory allocation\r\n";
 		print_error(Uart_driver, err, strlen(err));
 		while(1);
 	}
-	if(Uart_driver->ptr_pool_tx == NULL){
-		char err[] = "ERROR Dinamic memory allocation\r\n";
-		print_error(Uart_driver, err, strlen(err));
-		while(1);
-	}
+
+	memoryBlock = &memoryPool;
+
+	//reservamos pool de mem para rx
+		memory = (mensaje_t *)pvPortMalloc(POOL_SIZE*sizeof(mensaje_t));
+		// Create memory pool used on task and UART
+		QMPool_init(&memoryPool, (mensaje_t *)memory, POOL_SIZE*sizeof(mensaje_t), PACKET_SIZE);
+
+		if(memory == NULL){
+			char err[] = "ERROR Dinamic memory allocation\r\n";
+			print_error(Uart_driver, err, strlen(err));
+			while(1);
+		}
+
+		memoryBlock_aux = &memoryPool;
+
 
 	Uart_driver->rxLen = 0;
 	Uart_driver->txLen = 0;
@@ -139,6 +150,7 @@ void reset_uart_task(void* taskParmPtr) {
 
 	while (1) {
 		xSemaphoreTake(time_expired_semaph, portMAX_DELAY);
+		taskENTER_CRITICAL();
 		gpioToggle(LED1);
 		//expiro el tiempo de ingreso de datos, se resetea el sistema
 		if (Uart_driver->start_rx == TRUE && Uart_driver->stop_rx == FALSE) {
@@ -146,6 +158,7 @@ void reset_uart_task(void* taskParmPtr) {
 			char err[] = "Supero tiempo";
 			print_error(Uart_driver, err, strlen(err));
 		}
+		taskEXIT_CRITICAL();
 		vTaskDelay(xPeriodicity);
 	}
 }
@@ -163,10 +176,7 @@ void packetTX(driver_t* Uart_driver)		//, char *mensaje )
 }
 
 static void clean_Uart(driver_t* Uart_driver) {
-	/*taskENTER_CRITICAL();
-	QMPool_put(&Uart_driver->Pool_memoria, Uart_driver->ptr_pool_rx);		//libero pool de memoria
-	//memset(Uart_driver->dato_rx, '\0', LENGHT_MAX);
-	taskEXIT_CRITICAL();*/
+	//QMPool_put(&Uart_driver->Pool_memoria, Uart_driver->ptr_pool_rx);		//libero pool de memoria
 	Uart_driver->rxCounter = 0;
 	Uart_driver->rxLen = 0;
 	Uart_driver->start_rx = FALSE;

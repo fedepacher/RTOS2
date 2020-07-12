@@ -27,7 +27,7 @@
 
 void print_error(driver_t* Uart_driver, char * msg, uint8_t lenght){
 	//Uart_driver->ptr_pool_rx = (mensaje_t *)QMPool_get(&Uart_driver->Pool_memoria, 0);//pedimos memoria
-	Uart_driver->ptr_pool_tx->msg = msg;
+	//Uart_driver->ptr_pool_tx->msg = msg;
 	Uart_driver->txLen = lenght;
 	packetTX(Uart_driver);
 	//QMPool_put( &Uart_driver->Pool_memoria, Uart_driver->ptr_pool_tx );
